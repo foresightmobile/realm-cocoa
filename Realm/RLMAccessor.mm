@@ -28,9 +28,10 @@
 #import "RLMRealm_Private.hpp"
 #import "RLMResults_Private.hpp"
 #import "RLMSchema_Private.h"
+#import "RLMSwiftProperty.h"
 #import "RLMUtil.hpp"
-#import "results.hpp"
 #import "property.hpp"
+#import "results.hpp"
 
 #import <objc/runtime.h>
 #import <objc/message.h>
@@ -297,18 +298,15 @@ id makeSetter(__unsafe_unretained RLMProperty *const prop) {
     }
 
     return ^(__unsafe_unretained RLMObjectBase *const obj, ArgType val) {
-        auto set = [&] {
-            setValue(obj, obj->_info->objectSchema->persisted_properties[index].table_column,
-                     static_cast<StorageType>(val));
-        };
+        auto tableColumn = obj->_info->objectSchema->persisted_properties[index].table_column;
         if (RLMObservationInfo *info = RLMGetObservationInfo(obj->_observationInfo,
                                                              obj->_row.get_index(), *obj->_info)) {
             info->willChange(name);
-            set();
+            setValue(obj, tableColumn, static_cast<StorageType>(val));
             info->didChange(name);
         }
         else {
-            set();
+            setValue(obj, tableColumn, static_cast<StorageType>(val));
         }
     };
 }
@@ -581,6 +579,34 @@ id RLMDynamicGetByName(__unsafe_unretained RLMObjectBase *const obj,
     return RLMDynamicGet(obj, prop);
 }
 
+template<typename T>
+T getOptional(__unsafe_unretained RLMObjectBase *const obj, uint16_t key, bool *gotValue) {
+    auto ret = get<realm::util::Optional<T>>(obj, key);
+    if (ret) {
+        *gotValue = true;
+    }
+    return ret.value_or(T{});
+}
+
+#define REALM_SWIFT_PROPERTY_ACCESSOR(objc, swift, rlmtype) \
+    objc RLMGetSwiftProperty##swift(__unsafe_unretained RLMObjectBase *const obj, uint16_t key) { \
+        return get<objc>(obj, key); \
+    } \
+    objc RLMGetSwiftProperty##swift##Optional(__unsafe_unretained RLMObjectBase *const obj, uint16_t key, bool *gotValue) { \
+        return getOptional<objc>(obj, key, gotValue); \
+    } \
+    void RLMSetSwiftProperty##swift(__unsafe_unretained RLMObjectBase *const obj, uint16_t key, objc value) { \
+        RLMVerifyAttached(obj); \
+        try { \
+            obj->_row.set(obj->_info->objectSchema->persisted_properties[key].table_column, value); \
+        } \
+        catch (std::exception const& e) { \
+            @throw RLMException(e); \
+        } \
+    }
+REALM_FOR_EACH_SWIFT_PRIMITIVE_TYPE(REALM_SWIFT_PROPERTY_ACCESSOR)
+#undef REALM_SWIFT_PROPERTY_ACCESSOR
+
 RLMAccessorContext::RLMAccessorContext(RLMAccessorContext& parent, realm::Property const& property)
 : _realm(parent._realm)
 , _info(property.type == realm::PropertyType::Object ? parent._info.linkTargetType(property) : parent._info)
@@ -624,7 +650,10 @@ id RLMAccessorContext::propertyValue(__unsafe_unretained id const obj, size_t pr
     // Property value from an instance of this object type
     id value;
     if ([obj isKindOfClass:_info.rlmObjectSchema.objectClass] && prop.swiftIvar) {
-        if (prop.array) {
+        if (prop.swiftAccessor) {
+            return [prop.swiftAccessor getAtPointer:(char *)(__bridge void *)obj + ivar_getOffset(prop.swiftIvar)];
+        }
+        else if (prop.array) {
             return static_cast<RLMListBase *>(object_getIvar(obj, prop.swiftIvar))._rlmArray;
         }
         else if (prop.swiftIvar == RLMDummySwiftIvar) {
@@ -632,8 +661,11 @@ id RLMAccessorContext::propertyValue(__unsafe_unretained id const obj, size_t pr
             // https://github.com/realm/realm-cocoa/issues/5784
             return NSNull.null;
         }
-        else { // optional
+        else if (prop.optional) { // optional
             value = RLMGetOptional(static_cast<RLMOptionalBase *>(object_getIvar(obj, prop.swiftIvar)));
+        }
+        else { // Swift managed property
+
         }
     }
     else {

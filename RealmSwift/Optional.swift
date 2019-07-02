@@ -37,6 +37,56 @@ extension Float: RealmOptionalType {}
 extension Double: RealmOptionalType {}
 extension Bool: RealmOptionalType {}
 
+/*
+public protocol RealmValue {
+    static func getProperty(_ obj: Object, _ key: UInt16) -> Self
+    static func setProperty(_ obj: Object, _ key: UInt16, _ value: Self)
+}
+extension Int: RealmValue {
+    public static func getProperty(_ obj: Object, _ key: UInt16) -> Int {
+        return RLMGetIntProperty(obj, key)
+    }
+    public static func setProperty(_ obj: Object, _ key: UInt16, _ value: Int) {
+        RLMSetIntProperty(obj, key, value)
+    }
+}
+
+@propertyWrapper
+public struct RealmManagedProperty<Value: RealmValue> {
+    @available(*, unavailable)
+    public var wrappedValue: Value {
+        get { fatalError("called wrappedValue getter") }
+        set { fatalError("called wrappedValue setter") }
+    }
+
+    public init(defaultValue value: Value, primaryKey: Bool = false, indexed: Bool = false) {
+        print("init: \(value) primaryKey: \(primaryKey)")
+    }
+
+    public static subscript<EnclosingSelf: Object, FinalValue>(
+        _enclosingInstance object: EnclosingSelf,
+        wrapped wrappedKeyPath: ReferenceWritableKeyPath<EnclosingSelf, FinalValue>,
+        storage storageKeyPath: ReferenceWritableKeyPath<EnclosingSelf, Self>
+        ) -> Value {
+        get {
+            return Value.getProperty(object, object.propertyIndex(storageKeyPath))
+        }
+        set {
+            Value.setProperty(object, object.propertyIndex(storageKeyPath), newValue)
+        }
+    }
+}
+
+class MyModel: Object {
+    @RealmManagedProperty(defaultValue: nextPk(), primaryKey: true)
+    var primaryKey: Int
+
+    @RealmManagedProperty(defaultValue: nil)
+    var value: String?
+}
+*/
+
+
 /**
  A `RealmOptional` instance represents an optional value for types that can't be
  directly declared as `@objc` in Swift, such as `Int`, `Float`, `Double`, and `Bool`.
