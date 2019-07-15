@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name                      = 'RealmSwift'
-  version                     = '9.9.9'
+  version                     = '3.17.1'
   s.version                   = version
   s.summary                   = 'Realm is a modern data framework & database for iOS, macOS, tvOS & watchOS.'
   s.description               = <<-DESC
@@ -9,7 +9,7 @@ Pod::Spec.new do |s|
                                 The Realm Mobile Database is a fast, easy-to-use replacement for Core Data & SQLite. Use it with the Realm Mobile Platform for realtime, automatic data sync. Works on iOS, macOS, tvOS & watchOS. Learn more and get help at https://realm.io.
                                 DESC
   s.homepage                  = "https://realm.io"
-  s.source                    = { :git => 'https://github.com/foresightmobile/realm-cocoa.git', :tag => "v#9.9.9", :submodules => true }
+  s.source                    = { :git => 'https://github.com/foresightmobile/realm-cocoa.git', :tag => "v#3.17.1", :submodules => true }
   s.author                    = { 'Realm' => 'help@realm.io' }
   s.requires_arc              = true
   s.social_media_url          = 'https://twitter.com/realm'
